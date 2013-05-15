@@ -8,6 +8,7 @@
 # ------------------------------------------------------------------------------
 
 DEB_BASE="
+aptitude
 at
 bash-completion
 bmon
@@ -62,16 +63,13 @@ whois
 DEB_STANDARD="
 anacron
 bti
-byobu
 ca-certificates
 cowsay
 cplay
 devilspie
 dnstracer
-etckeeper
-github-cli
 gitk
-guake
+imagemagick
 ipcalc
 jpegoptim
 lbdb
@@ -79,6 +77,7 @@ leafpad
 liblocale-ruby1.8
 liblocale-ruby1.9.1
 liblwp-useragent-determined-perl
+libmail-box-perl
 libtcltk-ruby1.9.1
 libwww-perl
 libxml2-dev
@@ -95,6 +94,7 @@ moc-ffmpeg-plugin
 mr
 mutt-patched
 netpbm
+notmuch
 numlockx
 offlineimap
 p7zip-full
@@ -110,6 +110,7 @@ unclutter
 units
 unrar
 urlview
+usbutils
 vim-gtk
 vlock
 wajig
@@ -128,14 +129,15 @@ xterm
 DEB_EXTRA="
 bitlbee
 build-essential
-byzanz
 chromium-browser
 cmake
 cscope
+cutycapt
 devscripts
 exuberant-ctags
 git-buildpackage
 glibc-doc
+golang-go
 graphviz
 gtk2-engines-wonderland
 highlight
@@ -143,6 +145,7 @@ idle
 imagemagick
 inkscape
 ipython
+key-mon
 latex-beamer
 libbsd-dev
 libfacets-ruby1.9.1
@@ -151,10 +154,10 @@ libglib2.0-doc
 librspec-ruby1.9.1
 libtemplate-multilingual-perl
 libtemplate-perl
+lmodern
 manpages-dev
 manpages-posix
 mercurial
-muttprint
 octave3.2
 pandoc
 pdfjam
@@ -165,6 +168,8 @@ php5-cli
 pyflakes
 python-doc
 python-docutils
+python-landslide-patched
+python-markdown-extra
 python-matplotlib
 python-numpy
 python-pygments
@@ -188,6 +193,7 @@ ubuntu-dev-tools
 vim-gnome
 weechat
 wireshark
+xdotool
 xfonts-scalable
 "
 
@@ -200,9 +206,16 @@ fi
 
 sudoattempt
 
-if [ -z "$HAS_APT_UPDATED" ]; then
+# 19 paket deposunu ekle.
+say "19 paket deposu (yoksa) ekleniyor..."
+if adddebrepository \
+	"19" \
+	"deb.ondokuz.biz" \
+	"sid" \
+	"main contrib non-free" \
+	"deb.ondokuz.biz/archive.key"; then
 	say "Paket indeksleri güncelleniyor..."
-	xaptitude update ||:
+	xaptget update ||:
 fi
 
 # XXX  Bu bir hek.  Apt/Aptitude müdahalesiz çalıştırılacak.  Bu araçlar fazla
@@ -217,26 +230,11 @@ for p in gnome gnome-desktop-environment; do
 	[ -n "$(missingdeb $p)" ] || DEB_GNOME="$DEB_GNOME $p"
 done
 
-try=2
-while [ $try -gt 0 ]; do
-	err=0
-
-	say "Temel Deb paketleri kuruluyor..."
-	xaptitude install $DEB_BASE || err=$?
-
-	if ! anyattr server && anyattr gui fat; then
-		say "Standart bir çalışma ortamı için gerekli Deb paketleri kuruluyor..."
-		xaptitude install $DEB_STANDARD $DEB_GNOME || err=$?
-	fi
-	if anyattr fat; then
-		say "Ekstra Deb paketleri kuruluyor..."
-		xaptitude install $DEB_EXTRA $DEB_GNOME || err=$?
-	fi
-
-	# hata yoksa çık
-	[ $err -ne 0 ] || break
-
-	cry "Bazı Deb paketlerin kurulumunda hata oluştu. " \
-	    "Tekrar denenerek kuruluma devam edilecek..."
-	try=$(($try - 1))
-done
+installdebs "Temel Deb paketleri kuruluyor" $DEB_BASE
+if ! anyattr server && anyattr gui fat; then
+	installdebs "Standart bir çalışma ortamı için gerekli Deb paketleri kuruluyor" \
+		$DEB_STANDARD $DEB_GNOME
+fi
+if anyattr fat; then
+	installdebs "Ekstra Deb paketleri kuruluyor" $DEB_EXTRA $DEB_GNOME
+fi
